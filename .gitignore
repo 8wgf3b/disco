@@ -1,0 +1,11 @@
+/target
+.env
+/.github
+.DS_Store
+.idea/
+.vscode/
+*.log
+node_modules/
+dist/
+build/
+*.tmp                                                                                       
