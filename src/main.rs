@@ -1,18 +1,8 @@
-use serenity::{
-    async_trait,
-    model::gateway::{GatewayIntents, Ready},
-    prelude::*,
-};
 use tracing::{debug, error, info};
 
-struct Handler;
-
-#[async_trait]
-impl EventHandler for Handler {
-    async fn ready(&self, _ctx: Context, ready: Ready) {
-        info!(user = %ready.user.name, "Bot connected");
-    }
-}
+mod api;
+mod bot;
+mod models;
 
 #[tokio::main]
 async fn main() {
@@ -25,22 +15,45 @@ async fn main() {
         )
         .init();
 
-    info!("Starting Discord bot...");
+    info!("Starting Discord bot with HTTP API...");
 
     let token = std::env::var("DISCORD_TOKEN").expect("Expected DISCORD_TOKEN in environment");
+    let http_port = std::env::var("HTTP_PORT").unwrap_or_else(|_| "3000".to_string());
+    let http_port = http_port
+        .parse::<u16>()
+        .expect("HTTP_PORT must be a valid port number");
+
     debug!("Discord token loaded from environment");
+    debug!("HTTP port: {}", http_port);
 
-    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
-    debug!(?intents, "Gateway intents configured");
-
-    let mut client = Client::builder(&token, intents)
-        .event_handler(Handler)
+    // Create Discord client and get HTTP handle
+    let (mut client, http) = bot::create_client(token)
         .await
-        .expect("Error creating client");
+        .expect("Failed to create client");
 
-    info!("Client created successfully, starting...");
+    // Create shared state for HTTP handlers
+    let bot_state = bot::BotState::new(http);
 
-    if let Err(why) = client.start().await {
-        error!(?why, "Client error");
+    // Run both bot and HTTP server concurrently
+    let bot_handle = tokio::spawn(async move {
+        if let Err(why) = client.start().await {
+            error!(?why, "Discord bot error");
+        }
+    });
+
+    let api_handle = tokio::spawn(async move {
+        api::run_server(bot_state, http_port).await;
+    });
+
+    // Wait for both to complete (or one to fail)
+    tokio::select! {
+        _ = bot_handle => {
+            info!("Bot task completed");
+        },
+        _ = api_handle => {
+            info!("API task completed");
+        }
     }
+
+    info!("Shutdown complete");
 }
