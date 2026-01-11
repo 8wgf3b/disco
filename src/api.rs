@@ -7,7 +7,7 @@ use axum::{
     Json, Router,
 };
 use serenity::model::id::ChannelId;
-use serenity::model::prelude::AttachmentType;
+use serenity::builder::CreateMessage;
 use std::sync::Arc;
 use tracing::{error, info};
 
@@ -127,29 +127,24 @@ async fn send_to_discord(
     content: Option<String>,
     files: Vec<(String, String, Vec<u8>)>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let channel = ChannelId(channel_id);
+    let channel = ChannelId::new(channel_id);
 
     // Send the message using a closure
-    channel
-        .send_message(&http, |mut message| {
-            if let Some(text) = content {
-                message = message.content(text);
-            }
+    let mut create_message = CreateMessage::new();
 
-            // Add files if any
-            if !files.is_empty() {
-                for (file_name, _content_type, bytes) in files {
-                    let file = AttachmentType::Bytes {
-                        data: std::borrow::Cow::Owned(bytes),
-                        filename: file_name.clone(),
-                    };
-                    message = message.add_file(file);
-                }
-            }
+    if let Some(text) = content {
+        create_message = create_message.content(text);
+    }
 
-            message
-        })
-        .await?;
+    // Add files if any
+    if !files.is_empty() {
+        for (file_name, _content_type, bytes) in files {
+            let file = serenity::all::CreateAttachment::bytes(bytes, file_name.clone());
+            create_message = create_message.add_file(file);
+        }
+    }
+
+    channel.send_message(&http, create_message).await?;
 
     Ok(())
 }
