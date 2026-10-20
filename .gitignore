@@ -22,10 +22,12 @@ build/
 *.tmp
 *.swp
 *~                                                                                       
-
+logs/
 # Added by cargo
 #
 # already existing elements were commented out
 
 #/target
 PROJECT.md
+ARCHITECTURE.md
+ROADMAP.md
