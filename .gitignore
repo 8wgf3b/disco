@@ -31,3 +31,7 @@ logs/
 PROJECT.md
 ARCHITECTURE.md
 ROADMAP.md
+scripts/
+*.sh
+.cargo/
+cargo-update-discobot
