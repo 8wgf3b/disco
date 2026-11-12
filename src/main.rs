@@ -4,13 +4,11 @@ use std::fs::create_dir_all;
 
 use anyhow::{Context, Result};
 use dotenvy::dotenv;
-use serenity::all::{
-    CreateCommand, CreateInteractionResponse, CreateInteractionResponseMessage, GuildId,
-    Interaction, Ready,
-};
+use serenity::all::{GuildId, Interaction, Ready};
 use tracing::{debug, error, info};
 use tracing_appender::{non_blocking::WorkerGuard, rolling::daily};
 
+use crate::commands::{dispatch, register_all};
 use crate::config::Config;
 use serenity::async_trait;
 use serenity::client::Context as Ctx;
@@ -56,25 +54,20 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Ctx, ready: Ready) {
         info!("Connected as {:?}", ready.user.name);
-        let ping_cmd = CreateCommand::new("ping").description("Replies pong");
-        match self.guild_id.set_commands(&ctx.http, vec![ping_cmd]).await {
+        match self.guild_id.set_commands(&ctx.http, register_all()).await {
             Ok(_) => info!("Commands registered"),
             Err(e) => error!("failed to register commands: {e}"),
         }
     }
 
     async fn interaction_create(&self, ctx: Ctx, interaction: Interaction) {
-        if let Interaction::Command(cmd) = interaction {
-            info!("got command: {:?}", cmd.data.name);
-            if cmd.data.name == "ping" {
-                let response = CreateInteractionResponse::Message(
-                    CreateInteractionResponseMessage::new().content("pong!"),
-                );
-                let _ = cmd
-                    .create_response(&ctx.http, response)
-                    .await
-                    .inspect_err(|e| error!("failed to reply: {e}"));
-            }
+        if let Interaction::Command(cmd) = interaction
+            && let Ok(response) = dispatch(&cmd.data).await
+        {
+            let _ = cmd
+                .create_response(&ctx.http, response)
+                .await
+                .inspect_err(|e| error!("failed to reply: {e}"));
         }
     }
 }
