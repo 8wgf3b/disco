@@ -1,11 +1,14 @@
+mod commands;
 pub mod config;
-
 use std::fs::create_dir_all;
 
 use anyhow::{Context, Result};
 use dotenvy::dotenv;
-use serenity::all::{CreateCommand, CreateInteractionResponse, CreateInteractionResponseMessage, GuildId, Interaction, Ready};
-use tracing::{ debug, error, info};
+use serenity::all::{
+    CreateCommand, CreateInteractionResponse, CreateInteractionResponseMessage, GuildId,
+    Interaction, Ready,
+};
+use tracing::{debug, error, info};
 use tracing_appender::{non_blocking::WorkerGuard, rolling::daily};
 
 use crate::config::Config;
@@ -18,36 +21,32 @@ use tracing_subscriber::{Layer, Registry};
 
 #[derive(Debug)]
 struct Handler {
-    guild_id: GuildId
+    guild_id: GuildId,
 }
 
 fn init_logging(log_dir: &str) -> Result<WorkerGuard> {
     create_dir_all(log_dir)?;
     let console_layer = console_subscriber::spawn::<Registry>();
-    let (file_writer, guard) = tracing_appender::non_blocking(
-        daily(log_dir, "disco.jsonl"),
-    );    
+    let (file_writer, guard) = tracing_appender::non_blocking(daily(log_dir, "disco.jsonl"));
     let stdout_filter = EnvFilter::new("info");
     let file_filter = EnvFilter::new("debug");
-tracing_subscriber::registry()
-    .with(console_layer)
-    .with(
-        tracing_subscriber::fmt::layer()
-            .with_target(false)
-            .with_filter(stdout_filter),
-    )
-    .with(
-        tracing_subscriber::fmt::layer()
-            .json()
-            .with_writer(file_writer)
-            .with_filter(file_filter),
-    )
-    
-    .try_init()
-    .context("installing tracing subscriber")?;
-    Ok(guard)    
+    tracing_subscriber::registry()
+        .with(console_layer)
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_target(false)
+                .with_filter(stdout_filter),
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .json()
+                .with_writer(file_writer)
+                .with_filter(file_filter),
+        )
+        .try_init()
+        .context("installing tracing subscriber")?;
+    Ok(guard)
 }
-
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -60,7 +59,7 @@ impl EventHandler for Handler {
         let ping_cmd = CreateCommand::new("ping").description("Replies pong");
         match self.guild_id.set_commands(&ctx.http, vec![ping_cmd]).await {
             Ok(_) => info!("Commands registered"),
-            Err(e) => error!("failed to register commands: {e}")
+            Err(e) => error!("failed to register commands: {e}"),
         }
     }
 
@@ -68,12 +67,16 @@ impl EventHandler for Handler {
         if let Interaction::Command(cmd) = interaction {
             info!("got command: {:?}", cmd.data.name);
             if cmd.data.name == "ping" {
-                let response = CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().content("pong!"));
-                let _ = cmd.create_response(&ctx.http, response).await.inspect_err(|e| error!("failed to reply: {e}"));
+                let response = CreateInteractionResponse::Message(
+                    CreateInteractionResponseMessage::new().content("pong!"),
+                );
+                let _ = cmd
+                    .create_response(&ctx.http, response)
+                    .await
+                    .inspect_err(|e| error!("failed to reply: {e}"));
             }
         }
     }
-
 }
 
 #[tokio::main]
@@ -81,19 +84,24 @@ async fn main() -> Result<()> {
     let _ = dotenv().context("No local .env file");
     let config = Config::from_env()?;
     info!("Config loaded");
-    let _log_guard = init_logging(&config.log_dir)?;    
+    let _log_guard = init_logging(&config.log_dir)?;
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
     //println!("{}", config.discord_token);
     let mut client = Client::builder(&config.discord_token, intents)
-        .event_handler(Handler {guild_id: GuildId::new(config.guild_id)})
+        .event_handler(Handler {
+            guild_id: GuildId::new(config.guild_id),
+        })
         .await
         .context("Err creating client")
         .inspect_err(|e| error!("{e:#}"))?;
 
     // Start listening for events by starting a single shard
-    client.start().await.inspect_err(|e| error!("Discord client stopped with an error {e:#}"))?; 
+    client
+        .start()
+        .await
+        .inspect_err(|e| error!("Discord client stopped with an error {e:#}"))?;
 
     info!("Closing program.");
     Ok(())
