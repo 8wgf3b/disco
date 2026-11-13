@@ -1,6 +1,7 @@
 use std::vec;
 
 use serenity::all::{CommandData, CreateCommand, CreateInteractionResponse};
+use thiserror::Error;
 
 use crate::commands::ping::Ping;
 
@@ -8,12 +9,12 @@ pub mod ping;
 
 use tracing::info;
 
-pub async fn dispatch(d: &CommandData) -> Result<CreateInteractionResponse, String> {
+pub async fn dispatch(d: &CommandData) -> Result<CreateInteractionResponse, AppError> {
     info!("got command: {:?}", d.name);
 
     match d.name.as_str() {
         Ping::NAME => Ping::try_from(d)?.execute().await,
-        _ => Err("Unknown Command".to_string()),
+        x => Err(AppError::UnknownCommand(x.to_string())),
     }
 }
 
@@ -21,8 +22,16 @@ pub fn register_all() -> Vec<CreateCommand> {
     vec![Ping::register()]
 }
 
+#[derive(Debug, Error)]
+pub enum AppError {
+    #[error("Unknown command: {0}")]
+    UnknownCommand(String),
+    #[error("Discord error: {0} ")]
+    Discord(#[from] serenity::Error)
+}
+
 pub trait Command {
     const NAME: &'static str;
-    async fn execute(&self) -> Result<CreateInteractionResponse, String>;
+    async fn execute(&self) -> Result<CreateInteractionResponse, AppError>;
     fn register() -> CreateCommand;
 }

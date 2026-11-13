@@ -1,4 +1,4 @@
-use crate::commands::Command;
+use crate::commands::{AppError, Command};
 use serenity::all::{
     self, CommandData, CreateCommand, CreateInteractionResponse, CreateInteractionResponseMessage,
 };
@@ -7,7 +7,7 @@ pub struct Ping;
 
 impl Command for Ping {
     const NAME: &'static str = "ping";
-    async fn execute(&self) -> Result<all::CreateInteractionResponse, String> {
+    async fn execute(&self) -> Result<all::CreateInteractionResponse, AppError> {
         Ok(CreateInteractionResponse::Message(
             CreateInteractionResponseMessage::new().content("pong!"),
         ))
@@ -19,7 +19,7 @@ impl Command for Ping {
 }
 
 impl TryFrom<&CommandData> for Ping {
-    type Error = String;
+    type Error = AppError;
     fn try_from(_value: &CommandData) -> Result<Self, Self::Error> {
         Ok(Ping)
     }
