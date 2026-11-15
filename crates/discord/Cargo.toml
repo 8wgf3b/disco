@@ -1,0 +1,10 @@
+[package]
+name = "disco-discord"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+disco-core = { path = "../core" }
+serenity = { workspace = true, features = ["http", "model", "builder"] }
+tokio = { workspace = true, features = ["sync"] }
+tracing.workspace = true
