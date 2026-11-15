@@ -1,10 +1,9 @@
 use std::vec;
 
 use serenity::all::{CommandData, CreateCommand, CreateInteractionResponse};
-use thiserror::Error;
 
 use crate::commands::{help::Help, ping::Ping};
-
+use disco_core::AppError;
 pub mod help;
 pub mod ping;
 use tracing::info;
@@ -26,14 +25,6 @@ pub async fn dispatch(d: &CommandData) -> Result<CreateInteractionResponse, AppE
 
 pub fn register_all() -> Vec<CreateCommand> {
     vec![Ping::register(), Help::register()]
-}
-
-#[derive(Debug, Error)]
-pub enum AppError {
-    #[error("Unknown command: {0}")]
-    UnknownCommand(String),
-    #[error("Discord error: {0}")]
-    Discord(#[from] serenity::Error),
 }
 
 pub trait Command {

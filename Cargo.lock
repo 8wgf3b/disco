@@ -384,17 +384,26 @@ dependencies = [
 
 [[package]]
 name = "disco"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "console-subscriber",
+ "disco-core",
  "dotenvy",
  "serenity",
- "thiserror 2.0.21",
  "tokio",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "disco-core"
+version = "0.1.0"
+dependencies = [
+ "serenity",
+ "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]

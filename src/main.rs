@@ -4,8 +4,10 @@ use std::fs::create_dir_all;
 
 use anyhow::{Context, Result};
 use dotenvy::dotenv;
-use serenity::all::{GuildId, Interaction, Ready};
-use tracing::{debug, error, info};
+use serenity::all::{
+    CreateInteractionResponse, CreateInteractionResponseMessage, GuildId, Interaction, Ready,
+};
+use tracing::{debug, error, info, warn};
 use tracing_appender::{non_blocking::WorkerGuard, rolling::daily};
 
 use crate::commands::{dispatch, register_all};
@@ -61,9 +63,18 @@ impl EventHandler for Handler {
     }
 
     async fn interaction_create(&self, ctx: Ctx, interaction: Interaction) {
-        if let Interaction::Command(cmd) = interaction
-            && let Ok(response) = dispatch(&cmd.data).await
-        {
+        if let Interaction::Command(cmd) = interaction {
+            let response = match dispatch(&cmd.data).await {
+                Ok(resp) => resp,
+                Err(e) => {
+                    warn!("command failed: {e:#}");
+                    CreateInteractionResponse::Message(
+                        CreateInteractionResponseMessage::new()
+                            .content(e.to_string())
+                            .ephemeral(true),
+                    )
+                }
+            };
             let _ = cmd
                 .create_response(&ctx.http, response)
                 .await

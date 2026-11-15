@@ -6,4 +6,6 @@ pub enum AppError {
     UnknownCommand(String),
     #[error("Discord error: {0}")]
     Discord(#[from] serenity::Error),
+    #[error("Outbox Closed")]
+    OutboxClosed,
 }
