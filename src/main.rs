@@ -1,12 +1,17 @@
 mod commands;
 pub mod config;
 use std::fs::create_dir_all;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
+use disco_core::{AppError, Outbound, OutboxHandle};
+use disco_discord::run_delivery;
 use dotenvy::dotenv;
 use serenity::all::{
     CreateInteractionResponse, CreateInteractionResponseMessage, GuildId, Interaction, Ready,
 };
+use tokio::task::JoinSet;
+use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
 use tracing_appender::{non_blocking::WorkerGuard, rolling::daily};
 
@@ -83,6 +88,18 @@ impl EventHandler for Handler {
     }
 }
 
+async fn tick_producer(outbox: OutboxHandle, channel: u64) {
+    info!("Initiated tick producer task @ {channel}");
+    loop {
+        let msg = Outbound::text(channel, "tock!");
+        if let Err(AppError::OutboxClosed) = outbox.send(msg).await {
+            info!("Outbox is closed. Closing the tick producer");
+            break;
+        }
+        sleep(Duration::from_mins(15)).await;
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let _ = dotenv().context("No local .env file");
@@ -102,11 +119,14 @@ async fn main() -> Result<()> {
         .inspect_err(|e| error!("{e:#}"))?;
 
     // Start listening for events by starting a single shard
+    let (outbox, rx) = OutboxHandle::new(100);
+    let mut jset = JoinSet::new();
+    jset.spawn(run_delivery(rx, client.http.clone()));
+    jset.spawn(tick_producer(outbox, config.tick_cid));
     client
         .start()
         .await
         .inspect_err(|e| error!("Discord client stopped with an error {e:#}"))?;
-
     info!("Closing program.");
     Ok(())
 }

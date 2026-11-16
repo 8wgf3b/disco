@@ -5,7 +5,7 @@ resolver = "2"
 
 [package]
 name = "disco"
-version = "0.4.1"
+version = "0.5.0"
 edition = "2024"
 
 [workspace.dependencies]
@@ -22,13 +22,14 @@ thiserror = "2.0.21"
 [dependencies]
 anyhow.workspace = true
 dotenvy.workspace = true
-tokio = {workspace = true, features = ["macros", "rt-multi-thread" , "tracing"]}
+tokio = {workspace = true, features = ["macros", "rt-multi-thread" , "tracing", "time"]}
 serenity = {workspace = true, features = ["client", "gateway", "rustls_backend"]}
 tracing.workspace = true
 tracing-appender.workspace = true
 tracing-subscriber = {workspace = true, features = ["env-filter", "fmt", "json"]}
 console-subscriber.workspace = true
 disco-core = {path = "crates/core"}
+disco-discord = {path = "crates/discord"}
 
 [profile.release]
 strip = true

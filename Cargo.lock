@@ -384,11 +384,12 @@ dependencies = [
 
 [[package]]
 name = "disco"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "console-subscriber",
  "disco-core",
+ "disco-discord",
  "dotenvy",
  "serenity",
  "tokio",
