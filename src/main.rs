@@ -1,4 +1,3 @@
-mod commands;
 pub mod config;
 use std::fs::create_dir_all;
 use std::time::Duration;
@@ -7,27 +6,18 @@ use anyhow::{Context, Result};
 use disco_core::{AppError, Outbound, OutboxHandle};
 use disco_discord::run_delivery;
 use dotenvy::dotenv;
-use serenity::all::{
-    CreateInteractionResponse, CreateInteractionResponseMessage, GuildId, Interaction, Ready,
-};
+
+use serenity::Client;
+use serenity::all::GatewayIntents;
 use tokio::task::JoinSet;
 use tokio::time::sleep;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info};
 use tracing_appender::{non_blocking::WorkerGuard, rolling::daily};
 
-use crate::commands::{dispatch, register_all};
 use crate::config::Config;
-use serenity::async_trait;
-use serenity::client::Context as Ctx;
-use serenity::model::channel::Message;
-use serenity::prelude::*;
+use disco_discord::Handler;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 use tracing_subscriber::{Layer, Registry};
-
-#[derive(Debug)]
-struct Handler {
-    guild_id: GuildId,
-}
 
 fn init_logging(log_dir: &str) -> Result<WorkerGuard> {
     create_dir_all(log_dir)?;
@@ -53,41 +43,6 @@ fn init_logging(log_dir: &str) -> Result<WorkerGuard> {
     Ok(guard)
 }
 
-#[async_trait]
-impl EventHandler for Handler {
-    async fn message(&self, _ctx: Ctx, msg: Message) {
-        debug!("{:?}", msg.content)
-    }
-
-    async fn ready(&self, ctx: Ctx, ready: Ready) {
-        info!("Connected as {:?}", ready.user.name);
-        match self.guild_id.set_commands(&ctx.http, register_all()).await {
-            Ok(_) => info!("Commands registered"),
-            Err(e) => error!("failed to register commands: {e}"),
-        }
-    }
-
-    async fn interaction_create(&self, ctx: Ctx, interaction: Interaction) {
-        if let Interaction::Command(cmd) = interaction {
-            let response = match dispatch(&cmd.data).await {
-                Ok(resp) => resp,
-                Err(e) => {
-                    warn!("command failed: {e:#}");
-                    CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new()
-                            .content(e.to_string())
-                            .ephemeral(true),
-                    )
-                }
-            };
-            let _ = cmd
-                .create_response(&ctx.http, response)
-                .await
-                .inspect_err(|e| error!("failed to reply: {e}"));
-        }
-    }
-}
-
 async fn tick_producer(outbox: OutboxHandle, channel: u64) {
     info!("Initiated tick producer task @ {channel}");
     loop {
@@ -111,9 +66,7 @@ async fn main() -> Result<()> {
         | GatewayIntents::MESSAGE_CONTENT;
     //println!("{}", config.discord_token);
     let mut client = Client::builder(&config.discord_token, intents)
-        .event_handler(Handler {
-            guild_id: GuildId::new(config.guild_id),
-        })
+        .event_handler(Handler::new(config.guild_id))
         .await
         .context("Err creating client")
         .inspect_err(|e| error!("{e:#}"))?;

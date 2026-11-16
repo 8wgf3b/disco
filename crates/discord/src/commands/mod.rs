@@ -1,11 +1,13 @@
+pub mod help;
+pub mod ping;
+
 use std::vec;
 
 use serenity::all::{CommandData, CreateCommand, CreateInteractionResponse};
 
 use crate::commands::{help::Help, ping::Ping};
 use disco_core::AppError;
-pub mod help;
-pub mod ping;
+
 use tracing::info;
 
 pub const ALL: &[(&str, &str)] = &[
@@ -30,7 +32,9 @@ pub fn register_all() -> Vec<CreateCommand> {
 pub trait Command {
     const NAME: &'static str;
     const DESCRIPTION: &'static str;
-    async fn execute(&self) -> Result<CreateInteractionResponse, AppError>;
+    fn execute(
+        &self,
+    ) -> impl std::future::Future<Output = Result<CreateInteractionResponse, AppError>> + Send;
     fn register() -> CreateCommand {
         CreateCommand::new(Self::NAME).description(Self::DESCRIPTION)
     }

@@ -1,6 +1,10 @@
+pub mod commands;
+pub mod handler;
+
 use std::sync::Arc;
 
 use disco_core::{AppError, Outbound};
+pub use handler::Handler;
 use serenity::all::Http;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info};
