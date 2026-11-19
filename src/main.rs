@@ -16,6 +16,7 @@ use tracing_appender::{non_blocking::WorkerGuard, rolling::daily};
 
 use crate::config::Config;
 use disco_discord::Handler;
+use disco_store::get_pools;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 use tracing_subscriber::{Layer, Registry};
 
@@ -24,7 +25,8 @@ fn init_logging(log_dir: &str) -> Result<WorkerGuard> {
     let console_layer = console_subscriber::spawn::<Registry>();
     let (file_writer, guard) = tracing_appender::non_blocking(daily(log_dir, "disco.jsonl"));
     let stdout_filter = EnvFilter::new("info");
-    let file_filter = EnvFilter::new("debug");
+    let file_filter =
+        EnvFilter::new("warn,disco_core=debug,disco_discord=debug,disco_store=debug,disco=debug");
     tracing_subscriber::registry()
         .with(console_layer)
         .with(
@@ -59,8 +61,11 @@ async fn tick_producer(outbox: OutboxHandle, channel: u64) {
 async fn main() -> Result<()> {
     let _ = dotenv().context("No local .env file");
     let config = Config::from_env()?;
-    info!("Config loaded");
     let _log_guard = init_logging(&config.log_dir)?;
+    info!("Config loaded");
+    let _connpool = get_pools(&config.database_url)
+        .await
+        .inspect_err(|e| error!("Couldn't create sqlite connection pools: {e}"))?;
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;

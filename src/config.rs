@@ -6,6 +6,7 @@ pub struct Config {
     pub log_dir: String,
     pub guild_id: u64,
     pub tick_cid: u64,
+    pub database_url: String,
 }
 
 impl Config {
@@ -22,11 +23,13 @@ impl Config {
         let tick_cid = var("TICK_CHANNEL_ID")
             .context("Main Server TICK_CHANNEL_ID env var not set.")?
             .parse()?;
+        let database_url = var("DATABASE_URL").context("DATABASE_URL not set")?;
         Ok(Self {
             discord_token,
             log_dir,
             guild_id,
             tick_cid,
+            database_url,
         })
     }
 }
