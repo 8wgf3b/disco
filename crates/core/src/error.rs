@@ -8,4 +8,6 @@ pub enum AppError {
     Discord(#[from] serenity::Error),
     #[error("Outbox Closed")]
     OutboxClosed,
+    #[error("Storage error: {0}")]
+    Storage(#[source] Box<dyn std::error::Error + Send + Sync>),
 }

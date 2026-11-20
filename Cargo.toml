@@ -19,6 +19,8 @@ tracing-appender = "0.2"
 console-subscriber = "0.5"
 thiserror = "2.0.21"
 sqlx = "0.8.6"
+async-trait = "0.1.92"
+
 
 [dependencies]
 anyhow.workspace = true

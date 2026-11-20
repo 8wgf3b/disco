@@ -470,6 +470,7 @@ dependencies = [
 name = "disco-core"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "serenity",
  "thiserror 2.0.21",
  "tokio",

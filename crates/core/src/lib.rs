@@ -3,3 +3,5 @@ pub use error::AppError;
 
 pub mod outbox;
 pub use outbox::{Outbound, OutboxHandle};
+
+pub mod jobs;

@@ -7,6 +7,7 @@ edition = "2024"
 thiserror.workspace = true
 serenity = {workspace = true, features = ["model"]}
 tokio = {workspace = true, features = ["sync"]}
+async-trait.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt"] }
